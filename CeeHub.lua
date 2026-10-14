@@ -3,13 +3,21 @@
     CeeHub v1.0
     Made by CeeWorks
 
-    One LocalScript:
-    StarterPlayer > StarterPlayerScripts
+    Roblox Studio LocalScript
+    Place in StarterPlayer > StarterPlayerScripts
 
     RightShift = Show / Hide CeeHub
-    Automatic Lock On = Enable from the Targeting tab
 
-    Designed for your own Roblox experience.
+    Features:
+    - Player ESP
+    - Player Names
+    - Team Check
+    - Automatic Lock On
+    - Mouse Override
+    - First/Third Person Camera Tracking
+    - FOV Circle
+    - Head/Torso Selection
+    - CeeWorks Studio Discord Community
 ]]
 
 local Players = game:GetService("Players")
@@ -20,7 +28,7 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Remove previous instance if present
+-- REMOVE PREVIOUS INSTANCE
 
 if type(_G.CeeHubCleanup) == "function" then
 	pcall(_G.CeeHubCleanup)
@@ -59,6 +67,11 @@ local state = {
 	animations = true
 }
 
+-- MOUSE OVERRIDE SETTINGS
+
+local mouseOverrideThreshold = 48
+local mouseOverrideCooldown = 0.65
+
 local running = true
 local connections = {}
 local playerConnections = {}
@@ -69,6 +82,10 @@ local refreshers = {}
 
 local currentPage = "Home"
 local currentTarget = nil
+local ignoredTarget = nil
+local overrideUntil = 0
+local mouseMovement = 0
+local previousMouseMovement = 0
 
 -- HELPERS
 
@@ -211,7 +228,7 @@ version.Size = UDim2.fromOffset(155, 20)
 
 local nav = create("Frame", {
 	Position = UDim2.fromOffset(12, 110),
-	Size = UDim2.new(1, -24, 0, 310),
+	Size = UDim2.new(1, -24, 0, 270),
 	BackgroundTransparency = 1
 }, sidebar)
 
@@ -220,37 +237,60 @@ create("UIListLayout", {
 	SortOrder = Enum.SortOrder.LayoutOrder
 }, nav)
 
+-- DISCORD INVITATION
+
+local discordCard = create("Frame", {
+	Name = "DiscordInvite",
+	Position = UDim2.new(0, 12, 1, -112),
+	Size = UDim2.new(1, -24, 0, 68),
+	BackgroundColor3 = C.CARD,
+	BorderSizePixel = 0
+}, sidebar)
+
+corner(discordCard, 10)
+border(discordCard, C.PURPLE, 0)
+
+local discordTitle = text(
+	discordCard,
+	"JOIN OUR DISCORD!",
+	12,
+	C.WHITE,
+	true
+)
+
+discordTitle.Position = UDim2.fromOffset(8, 6)
+discordTitle.Size = UDim2.new(1, -16, 0, 18)
+discordTitle.TextXAlignment = Enum.TextXAlignment.Center
+
+local discordName = text(
+	discordCard,
+	"CeeWorks Studio",
+	11,
+	C.LIGHT,
+	true
+)
+
+discordName.Position = UDim2.fromOffset(8, 24)
+discordName.Size = UDim2.new(1, -16, 0, 18)
+discordName.TextXAlignment = Enum.TextXAlignment.Center
+
+local discordCode = text(
+	discordCard,
+	"W5hU4DEJKZ",
+	14,
+	C.WHITE,
+	true
+)
+
+discordCode.Position = UDim2.fromOffset(8, 43)
+discordCode.Size = UDim2.new(1, -16, 0, 20)
+discordCode.TextXAlignment = Enum.TextXAlignment.Center
+
 local footer = text(
 	sidebar, "Made by CeeWorks", 11, C.MUTED
 )
 footer.Position = UDim2.new(0, 19, 1, -37)
 footer.Size = UDim2.fromOffset(160, 23)
-
--- DISCORD COMMUNITY INVITE (ALWAYS VISIBLE IN FULL WINDOW)
-local discordCard = create("Frame", {
-	Name = "DiscordCommunity",
-	Position = UDim2.fromOffset(12, 391),
-	Size = UDim2.new(1, -24, 0, 65),
-	BackgroundColor3 = C.DEEP,
-	BorderSizePixel = 0
-}, sidebar)
-corner(discordCard, 10)
-border(discordCard, C.PURPLE, 0)
-
-local discordHeading = text(discordCard, "JOIN OUR DISCORD!", 12, C.WHITE, true)
-discordHeading.Position = UDim2.fromOffset(6, 5)
-discordHeading.Size = UDim2.new(1, -12, 0, 18)
-discordHeading.TextXAlignment = Enum.TextXAlignment.Center
-
-local discordCommunity = text(discordCard, "CeeWorks Studio", 12, C.LIGHT, true)
-discordCommunity.Position = UDim2.fromOffset(6, 23)
-discordCommunity.Size = UDim2.new(1, -12, 0, 18)
-discordCommunity.TextXAlignment = Enum.TextXAlignment.Center
-
-local discordInvite = text(discordCard, "W5hU4DEJKZ", 14, C.WHITE, true)
-discordInvite.Position = UDim2.fromOffset(6, 42)
-discordInvite.Size = UDim2.new(1, -12, 0, 19)
-discordInvite.TextXAlignment = Enum.TextXAlignment.Center
 
 -- CONTENT
 
@@ -827,6 +867,15 @@ connect(Players.PlayerRemoving, function(target)
 	end
 
 	playerConnections[target] = nil
+
+	if currentTarget and currentTarget.Parent ==
+		target.Character then
+		currentTarget = nil
+	end
+
+	if ignoredTarget == target then
+		ignoredTarget = nil
+	end
 end)
 
 connect(
@@ -870,14 +919,13 @@ local function updateFov()
 	}, 0.2)
 end
 
--- LOCK-ON TARGETING
--- The FOV radius is used to acquire a target, not to drop
--- a target after the camera begins following it.
+-- LOCK ON TARGETING
 
 local function getAimPart(character)
 	if state.targetPart == "Head" then
 		return character:FindFirstChild("Head")
 	end
+
 	return character:FindFirstChild("UpperTorso")
 		or character:FindFirstChild("Torso")
 		or character:FindFirstChild("HumanoidRootPart")
@@ -885,47 +933,76 @@ end
 
 local function targetInsideFov(part)
 	local camera = workspace.CurrentCamera
+
 	if not camera or not part then
 		return false, math.huge
 	end
 
-	local point, onScreen = camera:WorldToViewportPoint(part.Position)
+	local point, onScreen =
+		camera:WorldToViewportPoint(part.Position)
+
 	if not onScreen or point.Z <= 0 then
 		return false, math.huge
 	end
 
 	local center = camera.ViewportSize / 2
-	local distance = (Vector2.new(point.X, point.Y) - center).Magnitude
+
+	local distance = (
+		Vector2.new(point.X, point.Y) - center
+	).Magnitude
+
 	return distance <= state.radius, distance
 end
 
 local function validTargetPart(part)
-	if not part or not part.Parent then return false end
+	if not part or not part.Parent then
+		return false
+	end
+
 	local character = part.Parent
-	local targetPlayer = Players:GetPlayerFromCharacter(character)
-	if not targetPlayer or not eligible(targetPlayer) then return false end
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+	local targetPlayer =
+		Players:GetPlayerFromCharacter(character)
+
+	if not targetPlayer or not eligible(targetPlayer) then
+		return false
+	end
+
+	local humanoid =
+		character:FindFirstChildOfClass("Humanoid")
+
 	return humanoid ~= nil and humanoid.Health > 0
 end
 
 local function findNearestTarget()
-	local nearest, nearestDistance = nil, state.radius
+	local nearest = nil
+	local nearestDistance = state.radius
+
 	for _, target in ipairs(Players:GetPlayers()) do
-		if eligible(target) and target.Character then
-			local humanoid = target.Character:FindFirstChildOfClass("Humanoid")
+		if eligible(target)
+			and target ~= ignoredTarget
+			and target.Character then
+
+			local humanoid =
+				target.Character:FindFirstChildOfClass("Humanoid")
+
 			local part = getAimPart(target.Character)
+
 			if humanoid and humanoid.Health > 0 and part then
 				local inside, distance = targetInsideFov(part)
+
 				if inside and distance <= nearestDistance then
-					nearest, nearestDistance = part, distance
+					nearest = part
+					nearestDistance = distance
 				end
 			end
 		end
 	end
+
 	return nearest
 end
 
--- FIRST-PERSON DETECTION
+-- FIRST PERSON DETECTION
 
 local function isFirstPerson()
 	local camera = workspace.CurrentCamera
@@ -938,7 +1015,6 @@ local function isFirstPerson()
 	local head = character:FindFirstChild("Head")
 	if not head then return false end
 
-	-- In first person, camera position is near the head.
 	local distance = (
 		camera.CFrame.Position - head.Position
 	).Magnitude
@@ -946,53 +1022,141 @@ local function isFirstPerson()
 	return distance < 1.5
 end
 
--- AUTOMATIC CAMERA LOCK ON
--- A player inside the FOV circle is acquired automatically whenever
--- Lock On is enabled. The target is retained until invalid.
--- This is a camera mechanic for a Roblox Studio experience you own.
+-- MOUSE OVERRIDE
+-- A strong mouse movement breaks the current lock.
+-- The old target is temporarily ignored until you
+-- move it outside the FOV circle.
 
-local aimRenderName = "CeeHubAutoLock"
+connect(UIS.InputChanged, function(input, processed)
+	if not running or not state.aim then return end
+
+	if input.UserInputType ==
+		Enum.UserInputType.MouseMovement then
+
+		-- Avoid counting movement while interacting with the GUI.
+		if processed and UIS:GetFocusedTextBox() then
+			return
+		end
+
+		mouseMovement = mouseMovement + input.Delta.Magnitude
+	end
+end)
+
+local function breakLock()
+	if not currentTarget then return end
+
+	local character = currentTarget.Parent
+
+	ignoredTarget =
+		Players:GetPlayerFromCharacter(character)
+
+	currentTarget = nil
+	overrideUntil = os.clock() + mouseOverrideCooldown
+end
+
+-- CAMERA CONTROLLER
+
+local aimRenderName = "CeeHubAimAssist"
 
 RunService:BindToRenderStep(
 	aimRenderName,
 	Enum.RenderPriority.Camera.Value + 2,
 	function()
 		if not running then return end
+
 		updateScale()
+
+		local movement = mouseMovement
+		mouseMovement = 0
 
 		if not state.aim then
 			currentTarget = nil
+			ignoredTarget = nil
+			previousMouseMovement = 0
 			return
 		end
 
 		local camera = workspace.CurrentCamera
 		if not camera then return end
 
+		-- Allow a player to be selected again after
+		-- they leave the targeting circle.
+		if ignoredTarget then
+			local character = ignoredTarget.Character
+			local part = character and getAimPart(character)
+
+			if not part or not validTargetPart(part) then
+				ignoredTarget = nil
+			else
+				local inside = targetInsideFov(part)
+
+				if not inside then
+					ignoredTarget = nil
+				end
+			end
+		end
+
+		-- Detect intentional fast camera movement.
+		if currentTarget then
+			local combinedMovement =
+				movement + previousMouseMovement * 0.5
+
+			if combinedMovement >= mouseOverrideThreshold then
+				breakLock()
+				previousMouseMovement = 0
+				return
+			end
+		end
+
+		previousMouseMovement = movement
+
+		-- Cooldown prevents instant re-locking.
+		if os.clock() < overrideUntil then
+			return
+		end
+
+		-- Acquire another player when available.
 		if not validTargetPart(currentTarget) then
 			currentTarget = findNearestTarget()
 		end
 
-		if not currentTarget then return end
+		if not currentTarget then
+			return
+		end
 
 		local origin = camera.CFrame.Position
-		local destination = currentTarget.Position
-		if (destination - origin).Magnitude < 0.01 then return end
+		local targetPosition = currentTarget.Position
+		local direction = targetPosition - origin
 
-		-- No right-click or smoothing required, in either camera mode.
-		local lockedCamera = CFrame.lookAt(origin, destination)
+		if direction.Magnitude < 0.01 then
+			return
+		end
+
+		-- Instant camera tracking.
+		local lockedCamera =
+			CFrame.lookAt(origin, targetPosition)
+
 		camera.CFrame = lockedCamera
 
-		-- Keep the local character facing the same direction in first-person.
+		-- Align character facing in first person.
 		if isFirstPerson() then
 			local character = player.Character
+
 			if character then
-				local root = character:FindFirstChild("HumanoidRootPart")
-				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				local root =
+					character:FindFirstChild("HumanoidRootPart")
+
+				local humanoid =
+					character:FindFirstChildOfClass("Humanoid")
+
 				if root and humanoid and humanoid.Health > 0 then
 					local look = lockedCamera.LookVector
-					local flatLook = Vector3.new(look.X, 0, look.Z)
+					local flatLook =
+						Vector3.new(look.X, 0, look.Z)
+
 					if flatLook.Magnitude > 0.001 then
 						local rootPosition = root.Position
+
 						root.CFrame = CFrame.lookAt(
 							rootPosition,
 							rootPosition + flatLook.Unit
@@ -1088,11 +1252,12 @@ toggle(
 toggle(
 	home,
 	"Lock On",
-	"Automatically track players inside your FOV",
+	"Automatic tracking with mouse override",
 	"aim",
 	function(enabled)
 		if not enabled then
 			currentTarget = nil
+			ignoredTarget = nil
 		end
 	end
 )
@@ -1147,11 +1312,12 @@ section(targeting, "Lock On")
 toggle(
 	targeting,
 	"Lock On",
-	"Auto-lock when a player enters the FOV circle",
+	"Automatic lock with fast mouse release",
 	"aim",
 	function(enabled)
 		if not enabled then
 			currentTarget = nil
+			ignoredTarget = nil
 		end
 	end
 )
@@ -1173,6 +1339,17 @@ slider(
 	function(value)
 		state.radius = value
 		updateFov()
+	end
+)
+
+slider(
+	targeting,
+	"Mouse Override Strength",
+	15,
+	120,
+	48,
+	function(value)
+		mouseOverrideThreshold = value
 	end
 )
 
@@ -1451,5 +1628,5 @@ switchPage("Home")
 updateFov()
 
 print(
-	"[CeeHub] v1.0 loaded - Auto Lock - CeeWorks Studio"
+	"[CeeHub] v1.0 loaded - Mouse Override - Made by CeeWorks"
 )
