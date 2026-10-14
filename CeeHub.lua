@@ -57,12 +57,12 @@ local state = {
 	teamCheck = true,
 	aim = false,
 	fov = true,
-	radius = 140,
+	radius = 100,
 	targetPart = "Head",
 	animations = true
 }
 
-local mouseOverrideThreshold = 48
+local mouseOverrideThreshold = 15
 local mouseOverrideCooldown = 0.65
 
 local running = true
@@ -1630,7 +1630,7 @@ slider(
 	"FOV Radius",
 	40,
 	350,
-	140,
+	100,
 	function(value)
 		state.radius = value
 		updateFov()
@@ -1642,7 +1642,7 @@ slider(
 	"Mouse Override Strength",
 	15,
 	120,
-	48,
+	15,
 	function(value)
 		mouseOverrideThreshold = value
 	end
