@@ -7,7 +7,7 @@
     StarterPlayer > StarterPlayerScripts
 
     RightShift = Show / Hide CeeHub
-    Hold Right Mouse Button = Aim Assist
+    Hold Right Mouse Button = Lock On
 
     Designed for your own Roblox experience.
 ]]
@@ -55,7 +55,6 @@ local state = {
 	aim = false,
 	fov = true,
 	radius = 140,
-	smoothness = 20,
 	targetPart = "Head",
 	animations = true
 }
@@ -846,13 +845,14 @@ local function updateFov()
 	}, 0.2)
 end
 
--- AIM ASSIST TARGETING
+-- LOCK-ON TARGETING
+-- The FOV radius is used to acquire a target, not to drop
+-- a target after the camera begins following it.
 
 local function getAimPart(character)
 	if state.targetPart == "Head" then
 		return character:FindFirstChild("Head")
 	end
-
 	return character:FindFirstChild("UpperTorso")
 		or character:FindFirstChild("Torso")
 		or character:FindFirstChild("HumanoidRootPart")
@@ -864,73 +864,39 @@ local function targetInsideFov(part)
 		return false, math.huge
 	end
 
-	local point, onScreen =
-		camera:WorldToViewportPoint(part.Position)
-
+	local point, onScreen = camera:WorldToViewportPoint(part.Position)
 	if not onScreen or point.Z <= 0 then
 		return false, math.huge
 	end
 
 	local center = camera.ViewportSize / 2
-
-	local distance = (
-		Vector2.new(point.X, point.Y) - center
-	).Magnitude
-
+	local distance = (Vector2.new(point.X, point.Y) - center).Magnitude
 	return distance <= state.radius, distance
 end
 
 local function validTargetPart(part)
-	if not part or not part.Parent then
-		return false
-	end
-
+	if not part or not part.Parent then return false end
 	local character = part.Parent
-	local targetPlayer =
-		Players:GetPlayerFromCharacter(character)
-
-	if not targetPlayer or not eligible(targetPlayer) then
-		return false
-	end
-
-	local humanoid =
-		character:FindFirstChildOfClass("Humanoid")
-
-	if not humanoid or humanoid.Health <= 0 then
-		return false
-	end
-
-	local inside = targetInsideFov(part)
-	return inside
+	local targetPlayer = Players:GetPlayerFromCharacter(character)
+	if not targetPlayer or not eligible(targetPlayer) then return false end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	return humanoid ~= nil and humanoid.Health > 0
 end
 
 local function findNearestTarget()
-	local nearest = nil
-	local nearestDistance = state.radius
-
+	local nearest, nearestDistance = nil, state.radius
 	for _, target in ipairs(Players:GetPlayers()) do
-		if eligible(target) then
-			local character = target.Character
-
-			if character then
-				local humanoid =
-					character:FindFirstChildOfClass("Humanoid")
-
-				local part = getAimPart(character)
-
-				if humanoid and humanoid.Health > 0 and part then
-					local inside, distance =
-						targetInsideFov(part)
-
-					if inside and distance < nearestDistance then
-						nearest = part
-						nearestDistance = distance
-					end
+		if eligible(target) and target.Character then
+			local humanoid = target.Character:FindFirstChildOfClass("Humanoid")
+			local part = getAimPart(target.Character)
+			if humanoid and humanoid.Health > 0 and part then
+				local inside, distance = targetInsideFov(part)
+				if inside and distance <= nearestDistance then
+					nearest, nearestDistance = part, distance
 				end
 			end
 		end
 	end
-
 	return nearest
 end
 
@@ -979,17 +945,17 @@ connect(UIS.InputEnded, function(input)
 	end
 end)
 
--- CAMERA AIM ASSIST
--- Runs after Roblox's camera controller.
+-- INSTANT CAMERA LOCK ON
+-- Runs after the default Roblox camera controller.
+-- One target remains selected while right-click is held.
 
 local aimRenderName = "CeeHubAimAssist"
 
 RunService:BindToRenderStep(
 	aimRenderName,
 	Enum.RenderPriority.Camera.Value + 2,
-	function(dt)
+	function()
 		if not running then return end
-
 		updateScale()
 
 		if not state.aim or not aimHeld then
@@ -1003,72 +969,32 @@ RunService:BindToRenderStep(
 		if not validTargetPart(currentTarget) then
 			currentTarget = findNearestTarget()
 		end
-
 		if not currentTarget then return end
 
 		local origin = camera.CFrame.Position
 		local targetPosition = currentTarget.Position
-
 		local direction = targetPosition - origin
+		if direction.Magnitude < 0.01 then return end
 
-		if direction.Magnitude < 0.01 then
-			return
-		end
+		-- No interpolation: keep the target in the camera center.
+		local lockedCamera = CFrame.lookAt(origin, targetPosition)
+		camera.CFrame = lockedCamera
 
-		local desired = CFrame.lookAt(
-			origin,
-			targetPosition
-		)
-
-		local response = math.max(
-			state.smoothness / 10,
-			0.1
-		)
-
-		local alpha = math.clamp(
-			1 - math.exp(-response * dt),
-			0,
-			1
-		)
-
-		local newCamera = camera.CFrame:Lerp(
-			desired,
-			alpha
-		)
-
-		camera.CFrame = newCamera
-
-		-- First-person refinement:
-		-- Align character yaw with the camera to prevent
-		-- the default first-person character rotation from
-		-- fighting the aim direction.
+		-- In first person, align the character's horizontal facing
+		-- direction so Roblox's character rotation does not fight the lock.
 		if isFirstPerson() then
 			local character = player.Character
-
 			if character then
-				local root =
-					character:FindFirstChild("HumanoidRootPart")
-
-				local humanoid =
-					character:FindFirstChildOfClass("Humanoid")
-
-				if root and humanoid then
-					local look = newCamera.LookVector
-					local flatLook = Vector3.new(
-						look.X, 0, look.Z
-					)
-
+				local root = character:FindFirstChild("HumanoidRootPart")
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				if root and humanoid and humanoid.Health > 0 then
+					local look = lockedCamera.LookVector
+					local flatLook = Vector3.new(look.X, 0, look.Z)
 					if flatLook.Magnitude > 0.001 then
 						local rootPosition = root.Position
-
-						local desiredRoot = CFrame.lookAt(
+						root.CFrame = CFrame.lookAt(
 							rootPosition,
 							rootPosition + flatLook.Unit
-						)
-
-						root.CFrame = root.CFrame:Lerp(
-							desiredRoot,
-							alpha
 						)
 					end
 				end
@@ -1160,8 +1086,8 @@ toggle(
 
 toggle(
 	home,
-	"Aim Assist",
-	"Hold right-click to track a target",
+	"Lock On",
+	"Hold right-click to lock onto a target",
 	"aim",
 	function(enabled)
 		if not enabled then
@@ -1215,12 +1141,12 @@ toggle(
 
 local targeting = pages.Targeting
 
-section(targeting, "Aim Assist")
+section(targeting, "Lock On")
 
 toggle(
 	targeting,
-	"Aim Assist",
-	"Hold right mouse button to activate",
+	"Lock On",
+	"Hold right mouse button to lock on",
 	"aim",
 	function(enabled)
 		if not enabled then
@@ -1246,17 +1172,6 @@ slider(
 	function(value)
 		state.radius = value
 		updateFov()
-	end
-)
-
-slider(
-	targeting,
-	"Aim Smoothness",
-	1,
-	100,
-	20,
-	function(value)
-		state.smoothness = value
 	end
 )
 
@@ -1535,5 +1450,5 @@ switchPage("Home")
 updateFov()
 
 print(
-	"[CeeHub] v1.0 loaded - First-person support - Made by CeeWorks"
+	"[CeeHub] v1.0 loaded - Lock On - Made by CeeWorks"
 )
