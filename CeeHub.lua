@@ -3,22 +3,18 @@
     CeeHub v1.0
     Made by CeeWorks
 
-    Roblox Studio LocalScript
-    Place in StarterPlayer > StarterPlayerScripts
+    BetterEH-inspired Roblox UI
 
-    RightShift = Show / Hide CeeHub
+    Place in:
+    StarterPlayer > StarterPlayerScripts
 
-    Features:
-    - Player ESP
-    - Player Names
-    - Team Check
-    - Automatic Lock On
-    - Mouse Override
-    - First/Third Person Camera Tracking
-    - FOV Circle
-    - Head/Torso Selection
-    - CeeWorks Studio Discord Community
+    RightShift = Show / Hide
+
+    Discord: CeeWorks Studio
+    Invite Code: W5hU4DEJKZ
 ]]
+
+-- SERVICES
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -28,33 +24,32 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- REMOVE PREVIOUS INSTANCE
+-- CLEAN OLD INSTANCE
 
 if type(_G.CeeHubCleanup) == "function" then
 	pcall(_G.CeeHubCleanup)
 end
 
-local previous = playerGui:FindFirstChild("CeeHub")
-if previous then
-	previous:Destroy()
+local old = playerGui:FindFirstChild("CeeHub")
+if old then
+	old:Destroy()
 end
 
 -- THEME
 
 local C = {
-	BG = Color3.fromRGB(12, 12, 27),
-	SIDE = Color3.fromRGB(17, 17, 37),
-	CARD = Color3.fromRGB(27, 25, 52),
-	HOVER = Color3.fromRGB(42, 35, 80),
-	PURPLE = Color3.fromRGB(151, 96, 255),
-	DEEP = Color3.fromRGB(88, 49, 175),
-	LIGHT = Color3.fromRGB(212, 188, 255),
-	WHITE = Color3.fromRGB(248, 246, 255),
-	MUTED = Color3.fromRGB(158, 153, 187),
-	BORDER = Color3.fromRGB(65, 53, 102)
+	BG = Color3.fromRGB(17, 27, 39),
+	SIDE = Color3.fromRGB(20, 33, 47),
+	CARD = Color3.fromRGB(31, 47, 62),
+	HOVER = Color3.fromRGB(43, 61, 77),
+	ORANGE = Color3.fromRGB(255, 174, 45),
+	ORANGE_DARK = Color3.fromRGB(207, 115, 24),
+	ORANGE_LIGHT = Color3.fromRGB(255, 216, 147),
+	WHITE = Color3.fromRGB(248, 250, 255),
+	MUTED = Color3.fromRGB(174, 191, 208),
+	BORDER = Color3.fromRGB(65, 85, 102),
+	GREEN = Color3.fromRGB(95, 211, 137)
 }
-
--- SETTINGS
 
 local state = {
 	esp = false,
@@ -66,8 +61,6 @@ local state = {
 	targetPart = "Head",
 	animations = true
 }
-
--- MOUSE OVERRIDE SETTINGS
 
 local mouseOverrideThreshold = 48
 local mouseOverrideCooldown = 0.65
@@ -108,15 +101,15 @@ end
 
 local function corner(parent, radius)
 	return create("UICorner", {
-		CornerRadius = UDim.new(0, radius or 10)
+		CornerRadius = UDim.new(0, radius or 14)
 	}, parent)
 end
 
-local function border(parent, color, transparency)
+local function stroke(parent, color, thickness, transparency)
 	return create("UIStroke", {
 		Color = color or C.BORDER,
-		Transparency = transparency or 0,
-		Thickness = 1
+		Thickness = thickness or 1.5,
+		Transparency = transparency or 0
 	}, parent)
 end
 
@@ -124,7 +117,7 @@ local function tween(object, properties, duration)
 	local animation = TweenService:Create(
 		object,
 		TweenInfo.new(
-			state.animations and (duration or 0.25) or 0.01,
+			state.animations and (duration or 0.22) or 0.01,
 			Enum.EasingStyle.Quint,
 			Enum.EasingDirection.Out
 		),
@@ -135,7 +128,7 @@ local function tween(object, properties, duration)
 	return animation
 end
 
-local function text(parent, value, size, color, bold)
+local function label(parent, value, size, color, bold)
 	return create("TextLabel", {
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
@@ -149,6 +142,16 @@ local function text(parent, value, size, color, bold)
 	}, parent)
 end
 
+local function gradient(parent, first, second, rotation)
+	return create("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, first),
+			ColorSequenceKeypoint.new(1, second)
+		}),
+		Rotation = rotation or 0
+	}, parent)
+end
+
 -- GUI
 
 local gui = create("ScreenGui", {
@@ -159,20 +162,45 @@ local gui = create("ScreenGui", {
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 }, playerGui)
 
+-- SMALLER MAIN WINDOW
+
+local WINDOW_WIDTH = 700
+local WINDOW_HEIGHT = 450
+
+local shadow = create("Frame", {
+	Name = "Shadow",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromOffset(
+		WINDOW_WIDTH + 10,
+		WINDOW_HEIGHT + 10
+	),
+	BackgroundColor3 = Color3.fromRGB(5, 10, 17),
+	BackgroundTransparency = 0.68,
+	BorderSizePixel = 0,
+	ZIndex = 0
+}, gui)
+
+corner(shadow, 25)
+local shadowScale = create("UIScale", {Scale = 1}, shadow)
+
 local main = create("Frame", {
 	Name = "Main",
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.5),
-	Size = UDim2.fromOffset(790, 500),
+	Size = UDim2.fromOffset(
+		WINDOW_WIDTH,
+		WINDOW_HEIGHT
+	),
 	BackgroundColor3 = C.BG,
 	BorderSizePixel = 0,
 	ClipsDescendants = true
 }, gui)
 
-corner(main, 16)
-border(main, C.PURPLE, 0.35)
+corner(main, 22)
+-- Main clips all content to the rounded outer silhouette.
 
-local uiScale = create("UIScale", {
+local scale = create("UIScale", {
 	Scale = 1
 }, main)
 
@@ -183,7 +211,6 @@ local function updateScale()
 	if not camera then return end
 
 	local viewport = camera.ViewportSize
-
 	if viewport.X < 100 or viewport.Y < 100 then
 		return
 	end
@@ -194,154 +221,248 @@ local function updateScale()
 
 	lastViewport = viewport
 
-	uiScale.Scale = math.clamp(
+	scale.Scale = math.clamp(
 		math.min(
-			(viewport.X - 30) / 790,
-			(viewport.Y - 30) / 500
+			(viewport.X - 35) / WINDOW_WIDTH,
+			(viewport.Y - 35) / WINDOW_HEIGHT
 		),
-		0.35,
+		0.4,
 		1
 	)
+	shadowScale.Scale = scale.Scale
 end
 
 updateScale()
 
 -- SIDEBAR
 
+local SIDEBAR_WIDTH = 185
+
 local sidebar = create("Frame", {
-	Size = UDim2.new(0, 190, 1, 0),
+	Name = "Sidebar",
+	Size = UDim2.new(0, SIDEBAR_WIDTH, 1, 0),
 	BackgroundColor3 = C.SIDE,
 	BorderSizePixel = 0
 }, main)
 
-local logo = text(
-	sidebar, "◆  CeeHub", 23, C.WHITE, true
-)
-logo.Position = UDim2.fromOffset(19, 22)
-logo.Size = UDim2.fromOffset(165, 38)
+-- Rounded exterior, with a straight INNER edge for the orange divider.
+corner(sidebar, 22)
+create("Frame", {
+	Name = "SidebarInnerEdge",
+	Position = UDim2.new(1, -24, 0, 0),
+	Size = UDim2.new(0, 24, 1, 0),
+	BackgroundColor3 = C.SIDE,
+	BorderSizePixel = 0
+}, sidebar)
 
-local version = text(
-	sidebar, "VERSION 1.0", 10, C.LIGHT, true
+local sidebarAccent = create("Frame", {
+	Position = UDim2.new(1, -3, 0, 0),
+	Size = UDim2.new(0, 3, 1, 0),
+	BackgroundColor3 = C.ORANGE,
+	BorderSizePixel = 0
+}, sidebar)
+
+-- CEEHUB LOGO
+
+local logo = label(
+	sidebar,
+	"CeeHub",
+	27,
+	C.WHITE,
+	true
 )
-version.Position = UDim2.fromOffset(24, 61)
-version.Size = UDim2.fromOffset(155, 20)
+
+logo.Position = UDim2.fromOffset(17, 15)
+logo.Size = UDim2.fromOffset(155, 38)
+
+local logoUnderline = create("Frame", {
+	Position = UDim2.fromOffset(18, 57),
+	Size = UDim2.fromOffset(84, 4),
+	BackgroundColor3 = C.ORANGE,
+	BorderSizePixel = 0
+}, sidebar)
+
+corner(logoUnderline, 4)
+
+local version = label(
+	sidebar,
+	"VERSION 1.0",
+	10,
+	C.MUTED,
+	true
+)
+
+version.Position = UDim2.fromOffset(18, 67)
+version.Size = UDim2.fromOffset(145, 19)
+
+-- NAVIGATION
 
 local nav = create("Frame", {
-	Position = UDim2.fromOffset(12, 110),
-	Size = UDim2.new(1, -24, 0, 270),
+	Position = UDim2.fromOffset(12, 105),
+	Size = UDim2.new(1, -27, 0, 235),
 	BackgroundTransparency = 1
 }, sidebar)
 
 create("UIListLayout", {
-	Padding = UDim.new(0, 9),
+	Padding = UDim.new(0, 7),
 	SortOrder = Enum.SortOrder.LayoutOrder
 }, nav)
 
--- DISCORD INVITATION
+-- DISCORD COMMUNITY
 
-local discordCard = create("Frame", {
+local discordCard = create("TextButton", {
 	Name = "DiscordInvite",
-	Position = UDim2.new(0, 12, 1, -112),
-	Size = UDim2.new(1, -24, 0, 68),
+	Text = "",
+	AutoButtonColor = false,
+	Position = UDim2.new(0, 12, 1, -103),
+	Size = UDim2.new(1, -27, 0, 72),
 	BackgroundColor3 = C.CARD,
 	BorderSizePixel = 0
 }, sidebar)
 
-corner(discordCard, 10)
-border(discordCard, C.PURPLE, 0)
+corner(discordCard, 14)
+stroke(discordCard, C.ORANGE, 1.7)
 
-local discordTitle = text(
+local discordTitle = label(
 	discordCard,
 	"JOIN OUR DISCORD!",
-	12,
-	C.WHITE,
+	11,
+	C.ORANGE,
 	true
 )
 
-discordTitle.Position = UDim2.fromOffset(8, 6)
-discordTitle.Size = UDim2.new(1, -16, 0, 18)
+discordTitle.Position = UDim2.fromOffset(7, 6)
+discordTitle.Size = UDim2.new(1, -14, 0, 17)
 discordTitle.TextXAlignment = Enum.TextXAlignment.Center
 
-local discordName = text(
+local discordName = label(
 	discordCard,
 	"CeeWorks Studio",
 	11,
-	C.LIGHT,
-	true
-)
-
-discordName.Position = UDim2.fromOffset(8, 24)
-discordName.Size = UDim2.new(1, -16, 0, 18)
-discordName.TextXAlignment = Enum.TextXAlignment.Center
-
-local discordCode = text(
-	discordCard,
-	"W5hU4DEJKZ",
-	14,
 	C.WHITE,
 	true
 )
 
-discordCode.Position = UDim2.fromOffset(8, 43)
-discordCode.Size = UDim2.new(1, -16, 0, 20)
+discordName.Position = UDim2.fromOffset(7, 25)
+discordName.Size = UDim2.new(1, -14, 0, 17)
+discordName.TextXAlignment = Enum.TextXAlignment.Center
+
+local discordCode = label(
+	discordCard,
+	"W5hU4DEJKZ",
+	14,
+	C.ORANGE_LIGHT,
+	true
+)
+
+discordCode.Position = UDim2.fromOffset(7, 45)
+discordCode.Size = UDim2.new(1, -14, 0, 19)
 discordCode.TextXAlignment = Enum.TextXAlignment.Center
 
-local footer = text(
-	sidebar, "Made by CeeWorks", 11, C.MUTED
+local footer = label(
+	sidebar,
+	"Made by CeeWorks",
+	10,
+	C.MUTED
 )
-footer.Position = UDim2.new(0, 19, 1, -37)
-footer.Size = UDim2.fromOffset(160, 23)
+
+footer.Position = UDim2.new(0, 17, 1, -27)
+footer.Size = UDim2.fromOffset(150, 19)
 
 -- CONTENT
 
 local content = create("Frame", {
-	Position = UDim2.fromOffset(190, 0),
-	Size = UDim2.new(1, -190, 1, 0),
+	Position = UDim2.fromOffset(SIDEBAR_WIDTH, 0),
+	Size = UDim2.new(1, -SIDEBAR_WIDTH, 1, 0),
 	BackgroundTransparency = 1
 }, main)
 
 local header = create("Frame", {
-	Size = UDim2.new(1, 0, 0, 70),
-	BackgroundTransparency = 1
+	Size = UDim2.new(1, 0, 0, 65),
+	BackgroundColor3 = C.SIDE,
+	BorderSizePixel = 0
 }, content)
 
-local heading = text(
-	header, "Dashboard", 23, C.WHITE, true
+-- Round the header itself: an uncovered header rectangle can make
+-- the main window's top-right corner look square in Roblox.
+corner(header, 22)
+
+-- Keep only the lower part of the header squared so its bottom
+-- separator stays straight, while the upper-right edge is rounded.
+create("Frame", {
+	Name = "HeaderSquareBottom",
+	Position = UDim2.new(0, 0, 1, -22),
+	Size = UDim2.new(1, 0, 0, 22),
+	BackgroundColor3 = C.SIDE,
+	BorderSizePixel = 0
+}, header)
+
+local heading = label(
+	header,
+	"DASHBOARD",
+	20,
+	C.WHITE,
+	true
 )
-heading.Position = UDim2.fromOffset(23, 18)
-heading.Size = UDim2.fromOffset(340, 35)
+
+heading.Position = UDim2.fromOffset(23, 12)
+heading.Size = UDim2.fromOffset(290, 31)
+
+local headerSubtitle = label(
+	header,
+	"Roblox Visuals & Targeting Hub",
+	10,
+	C.MUTED
+)
+
+headerSubtitle.Position = UDim2.fromOffset(24, 40)
+headerSubtitle.Size = UDim2.fromOffset(310, 16)
+
+local headerLine = create("Frame", {
+	Position = UDim2.new(0, 0, 1, -2),
+	Size = UDim2.new(1, 0, 0, 2),
+	BackgroundColor3 = C.BORDER,
+	BorderSizePixel = 0
+}, header)
 
 local function headerButton(symbol, offset)
 	local button = create("TextButton", {
-		Position = UDim2.new(1, offset, 0, 19),
-		Size = UDim2.fromOffset(32, 32),
+		Position = UDim2.new(1, offset, 0, 15),
+		Size = UDim2.fromOffset(33, 33),
 		BackgroundColor3 = C.CARD,
 		Text = symbol,
 		TextColor3 = C.WHITE,
-		TextSize = 18,
+		TextSize = 19,
 		Font = Enum.Font.GothamBold,
 		AutoButtonColor = false
 	}, header)
 
-	corner(button, 8)
+	corner(button, 11)
 
 	connect(button.MouseEnter, function()
-		tween(button, {BackgroundColor3 = C.DEEP})
+		tween(button, {
+			BackgroundColor3 = C.ORANGE_DARK
+		})
 	end)
 
 	connect(button.MouseLeave, function()
-		tween(button, {BackgroundColor3 = C.CARD})
+		tween(button, {
+			BackgroundColor3 = C.CARD
+		})
 	end)
 
 	return button
 end
 
-local minimizeButton = headerButton("−", -82)
-local closeButton = headerButton("×", -43)
+local minimizeButton = headerButton("−", -78)
+local closeButton = headerButton("×", -40)
+
+-- PAGE HOLDER
+-- Extra padding prevents rounded cards from being clipped.
 
 local holder = create("Frame", {
-	Position = UDim2.fromOffset(23, 76),
-	Size = UDim2.new(1, -46, 1, -98),
+	Position = UDim2.fromOffset(19, 78),
+	Size = UDim2.new(1, -38, 1, -92),
 	BackgroundTransparency = 1,
 	ClipsDescendants = true
 }, content)
@@ -353,17 +474,17 @@ local function notify(message)
 
 	local notification = create("Frame", {
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -18, 1, 65),
-		Size = UDim2.fromOffset(300, 49),
+		Position = UDim2.new(1, -15, 1, 60),
+		Size = UDim2.fromOffset(285, 45),
 		BackgroundColor3 = C.CARD,
 		BorderSizePixel = 0,
 		ZIndex = 30
 	}, gui)
 
-	corner(notification, 10)
-	border(notification, C.PURPLE, 0.2)
+	corner(notification, 12)
+	stroke(notification, C.ORANGE, 1.5)
 
-	local messageText = text(
+	local notificationText = label(
 		notification,
 		"◆  " .. message,
 		12,
@@ -371,19 +492,19 @@ local function notify(message)
 		true
 	)
 
-	messageText.Position = UDim2.fromOffset(14, 6)
-	messageText.Size = UDim2.new(1, -28, 1, -12)
-	messageText.ZIndex = 31
+	notificationText.Position = UDim2.fromOffset(12, 5)
+	notificationText.Size = UDim2.new(1, -24, 1, -10)
+	notificationText.ZIndex = 31
 
 	tween(notification, {
-		Position = UDim2.new(1, -18, 1, -18)
-	}, 0.35)
+		Position = UDim2.new(1, -15, 1, -15)
+	}, 0.3)
 
 	task.delay(2.2, function()
 		if not notification.Parent then return end
 
 		local animation = tween(notification, {
-			Position = UDim2.new(1, -18, 1, 65)
+			Position = UDim2.new(1, -15, 1, 60)
 		}, 0.3)
 
 		animation.Completed:Wait()
@@ -393,6 +514,73 @@ local function notify(message)
 		end
 	end)
 end
+
+-- INTERACTIVE DISCORD CARD
+-- Roblox experiences cannot directly launch Discord/Chrome via a LocalScript.
+-- Direct players to the experience's official Social Links instead.
+
+local discordPopup = create("Frame", {
+	Name = "DiscordInfoPopup",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromOffset(350, 185),
+	BackgroundColor3 = C.SIDE,
+	BorderSizePixel = 0,
+	Visible = false,
+	ZIndex = 60
+}, gui)
+corner(discordPopup, 16)
+stroke(discordPopup, C.ORANGE, 1.8)
+
+local popupHeading = label(discordPopup, "CeeWorks Studio", 19, C.WHITE, true)
+popupHeading.Position = UDim2.fromOffset(18, 15)
+popupHeading.Size = UDim2.new(1, -70, 0, 28)
+popupHeading.ZIndex = 61
+
+local popupDescription = label(
+	discordPopup,
+	"https://discord.com/invite/W5hU4DEJKZ",
+	12,
+	C.MUTED
+)
+popupDescription.Position = UDim2.fromOffset(18, 53)
+popupDescription.Size = UDim2.new(1, -36, 0, 46)
+popupDescription.TextWrapped = true
+popupDescription.ZIndex = 61
+
+local popupCode = label(discordPopup, "Invite code: W5hU4DEJKZ", 15, C.ORANGE_LIGHT, true)
+popupCode.Position = UDim2.fromOffset(18, 109)
+popupCode.Size = UDim2.new(1, -36, 0, 27)
+popupCode.ZIndex = 61
+
+local popupClose = create("TextButton", {
+	Position = UDim2.new(1, -45, 0, 12),
+	Size = UDim2.fromOffset(30, 30),
+	BackgroundColor3 = C.CARD,
+	Text = "×",
+	TextColor3 = C.WHITE,
+	TextSize = 21,
+	Font = Enum.Font.GothamBold,
+	AutoButtonColor = false,
+	ZIndex = 62
+}, discordPopup)
+corner(popupClose, 10)
+
+connect(discordCard.MouseButton1Click, function()
+	discordPopup.Visible = not discordPopup.Visible
+end)
+
+connect(discordCard.MouseEnter, function()
+	tween(discordCard, {BackgroundColor3 = C.HOVER}, 0.18)
+end)
+
+connect(discordCard.MouseLeave, function()
+	tween(discordCard, {BackgroundColor3 = C.CARD}, 0.18)
+end)
+
+connect(popupClose.MouseButton1Click, function()
+	discordPopup.Visible = false
+end)
 
 -- PAGES
 
@@ -405,18 +593,23 @@ local function addPage(name)
 		CanvasSize = UDim2.fromOffset(0, 0),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollBarThickness = 3,
-		ScrollBarImageColor3 = C.PURPLE,
-		Visible = false
+		ScrollBarImageColor3 = C.ORANGE,
+		Visible = false,
+		ClipsDescendants = true
 	}, holder)
 
-	create("UIListLayout", {
-		Padding = UDim.new(0, 12),
-		SortOrder = Enum.SortOrder.LayoutOrder
-	}, page)
+	-- Padding creates breathing room around all cards.
 
 	create("UIPadding", {
-		PaddingRight = UDim.new(0, 8),
-		PaddingBottom = UDim.new(0, 12)
+		PaddingLeft = UDim.new(0, 3),
+		PaddingRight = UDim.new(0, 10),
+		PaddingTop = UDim.new(0, 3),
+		PaddingBottom = UDim.new(0, 15)
+	}, page)
+
+	create("UIListLayout", {
+		Padding = UDim.new(0, 11),
+		SortOrder = Enum.SortOrder.LayoutOrder
 	}, page)
 
 	pages[name] = page
@@ -430,11 +623,11 @@ local function switchPage(name)
 		page.Visible = pageName == name
 
 		if page.Visible then
-			page.Position = UDim2.fromOffset(12, 0)
+			page.Position = UDim2.fromOffset(9, 0)
 
 			tween(page, {
 				Position = UDim2.fromOffset(0, 0)
-			}, 0.3)
+			}, 0.24)
 		end
 	end
 
@@ -442,16 +635,19 @@ local function switchPage(name)
 		local selected = pageName == name
 
 		tween(button, {
-			BackgroundColor3 =
-				selected and C.DEEP or C.SIDE,
-			TextColor3 =
-				selected and C.WHITE or C.MUTED
-		}, 0.25)
+			BackgroundColor3 = selected
+				and C.ORANGE_DARK
+				or C.CARD,
+
+			TextColor3 = selected
+				and C.WHITE
+				or C.MUTED
+		}, 0.2)
 	end
 
-	heading.Text = name == "Home"
-		and "Dashboard"
-		or name
+	heading.Text = string.upper(
+		name == "Home" and "Dashboard" or name
+	)
 end
 
 local tabs = {
@@ -471,28 +667,33 @@ for index, tab in ipairs(tabs) do
 	local button = create("TextButton", {
 		Name = name,
 		LayoutOrder = index,
-		Size = UDim2.new(1, 0, 0, 44),
-		BackgroundColor3 = C.SIDE,
+		Size = UDim2.new(1, 0, 0, 38),
+		BackgroundColor3 = C.CARD,
 		Text = "  " .. symbol .. "     " .. name,
 		TextColor3 = C.MUTED,
-		TextSize = 14,
-		Font = Enum.Font.GothamMedium,
+		TextSize = 13,
+		Font = Enum.Font.GothamBold,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AutoButtonColor = false
 	}, nav)
 
-	corner(button, 9)
+	corner(button, 12)
+
 	navButtons[name] = button
 
 	connect(button.MouseEnter, function()
 		if currentPage ~= name then
-			tween(button, {BackgroundColor3 = C.HOVER})
+			tween(button, {
+				BackgroundColor3 = C.HOVER
+			})
 		end
 	end)
 
 	connect(button.MouseLeave, function()
 		if currentPage ~= name then
-			tween(button, {BackgroundColor3 = C.SIDE})
+			tween(button, {
+				BackgroundColor3 = C.CARD
+			})
 		end
 	end)
 
@@ -501,11 +702,20 @@ for index, tab in ipairs(tabs) do
 	end)
 end
 
+-- SECTION TITLES
+
 local function section(page, name)
-	local sectionLabel = text(
-		page, name, 16, C.WHITE, true
+	local sectionLabel = label(
+		page,
+		"//  " .. string.upper(name),
+		13,
+		C.WHITE,
+		true
 	)
-	sectionLabel.Size = UDim2.new(1, 0, 0, 30)
+
+	sectionLabel.Size = UDim2.new(1, 0, 0, 27)
+
+	return sectionLabel
 end
 
 local function refreshKey(key)
@@ -514,40 +724,55 @@ local function refreshKey(key)
 	end
 end
 
--- TOGGLES
+-- ROUNDED FEATURE CARDS
 
 local function toggle(page, name, description, key, callback)
 	local card = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 76),
+		Size = UDim2.new(1, 0, 0, 69),
 		BackgroundColor3 = C.CARD,
 		BorderSizePixel = 0
 	}, page)
 
-	corner(card, 12)
-	local outline = border(card)
+	corner(card, 15)
 
-	local titleLabel = text(
-		card, name, 15, C.WHITE, true
+	local outline = stroke(
+		card,
+		C.BORDER,
+		1.5,
+		0.12
 	)
-	titleLabel.Position = UDim2.fromOffset(18, 12)
-	titleLabel.Size = UDim2.new(1, -110, 0, 25)
 
-	local descriptionLabel = text(
-		card, description, 11, C.MUTED
+	local titleLabel = label(
+		card,
+		name,
+		14,
+		C.WHITE,
+		true
 	)
-	descriptionLabel.Position = UDim2.fromOffset(18, 41)
-	descriptionLabel.Size = UDim2.new(1, -110, 0, 19)
+
+	titleLabel.Position = UDim2.fromOffset(17, 11)
+	titleLabel.Size = UDim2.new(1, -115, 0, 24)
+
+	local descriptionLabel = label(
+		card,
+		description,
+		10,
+		C.MUTED
+	)
+
+	descriptionLabel.Position = UDim2.fromOffset(17, 37)
+	descriptionLabel.Size = UDim2.new(1, -115, 0, 18)
 
 	local button = create("TextButton", {
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -18, 0.5, 0),
-		Size = UDim2.fromOffset(54, 29),
+		Position = UDim2.new(1, -16, 0.5, 0),
+		Size = UDim2.fromOffset(53, 29),
 		BackgroundColor3 = C.BORDER,
 		Text = "",
 		AutoButtonColor = false
 	}, card)
 
-	corner(button, 20)
+	corner(button, 15)
 
 	local knob = create("Frame", {
 		Position = UDim2.fromOffset(4, 4),
@@ -556,19 +781,20 @@ local function toggle(page, name, description, key, callback)
 		BorderSizePixel = 0
 	}, button)
 
-	corner(knob, 20)
+	corner(knob, 12)
 
 	local function refresh()
 		local enabled = state[key]
 
 		tween(button, {
-			BackgroundColor3 =
-				enabled and C.PURPLE or C.BORDER
+			BackgroundColor3 = enabled
+				and C.ORANGE
+				or C.BORDER
 		})
 
 		tween(knob, {
 			Position = enabled
-				and UDim2.fromOffset(29, 4)
+				and UDim2.fromOffset(28, 4)
 				or UDim2.fromOffset(4, 4)
 		})
 	end
@@ -577,13 +803,23 @@ local function toggle(page, name, description, key, callback)
 	table.insert(refreshers[key], refresh)
 
 	connect(card.MouseEnter, function()
-		tween(card, {BackgroundColor3 = C.HOVER})
-		tween(outline, {Color = C.PURPLE})
+		tween(card, {
+			BackgroundColor3 = C.HOVER
+		})
+
+		tween(outline, {
+			Color = C.ORANGE
+		})
 	end)
 
 	connect(card.MouseLeave, function()
-		tween(card, {BackgroundColor3 = C.CARD})
-		tween(outline, {Color = C.BORDER})
+		tween(card, {
+			BackgroundColor3 = C.CARD
+		})
+
+		tween(outline, {
+			Color = C.BORDER
+		})
 	end)
 
 	connect(button.MouseButton1Click, function()
@@ -609,71 +845,82 @@ end
 
 local function slider(page, name, minimum, maximum, initial, callback)
 	local card = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 100),
+		Size = UDim2.new(1, 0, 0, 91),
 		BackgroundColor3 = C.CARD,
 		BorderSizePixel = 0
 	}, page)
 
-	corner(card, 12)
-	border(card)
+	corner(card, 15)
+	stroke(card, C.BORDER, 1.5, 0.12)
 
-	local nameLabel = text(
-		card, name, 15, C.WHITE, true
+	local nameLabel = label(
+		card,
+		name,
+		14,
+		C.WHITE,
+		true
 	)
-	nameLabel.Position = UDim2.fromOffset(18, 12)
-	nameLabel.Size = UDim2.fromOffset(300, 26)
 
-	local valueLabel = text(
-		card, tostring(initial), 15, C.LIGHT, true
+	nameLabel.Position = UDim2.fromOffset(17, 10)
+	nameLabel.Size = UDim2.new(1, -110, 0, 25)
+
+	local valueLabel = label(
+		card,
+		tostring(initial),
+		14,
+		C.ORANGE_LIGHT,
+		true
 	)
-	valueLabel.Position = UDim2.new(1, -80, 0, 12)
-	valueLabel.Size = UDim2.fromOffset(62, 26)
+
+	valueLabel.Position = UDim2.new(1, -78, 0, 10)
+	valueLabel.Size = UDim2.fromOffset(60, 25)
 	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 
 	local track = create("Frame", {
-		Position = UDim2.fromOffset(19, 67),
-		Size = UDim2.new(1, -38, 0, 7),
+		Position = UDim2.fromOffset(18, 61),
+		Size = UDim2.new(1, -36, 0, 7),
 		BackgroundColor3 = C.BORDER,
 		BorderSizePixel = 0
 	}, card)
 
-	corner(track, 10)
+	corner(track, 6)
 
-	local initialAlpha =
+	local alpha =
 		(initial - minimum) / (maximum - minimum)
 
 	local fill = create("Frame", {
-		Size = UDim2.fromScale(initialAlpha, 1),
-		BackgroundColor3 = C.PURPLE,
+		Size = UDim2.fromScale(alpha, 1),
+		BackgroundColor3 = C.ORANGE,
 		BorderSizePixel = 0
 	}, track)
 
-	corner(fill, 10)
+	corner(fill, 6)
 
 	local dot = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(initialAlpha, 0.5),
-		Size = UDim2.fromOffset(18, 18),
+		Position = UDim2.fromScale(alpha, 0.5),
+		Size = UDim2.fromOffset(17, 17),
 		BackgroundColor3 = C.WHITE,
 		BorderSizePixel = 0
 	}, track)
 
-	corner(dot, 20)
+	corner(dot, 9)
 
 	local hitbox = create("TextButton", {
-		Position = UDim2.fromOffset(0, -15),
-		Size = UDim2.new(1, 0, 0, 38),
+		Position = UDim2.fromOffset(0, -14),
+		Size = UDim2.new(1, 0, 0, 35),
 		BackgroundTransparency = 1,
-		Text = "",
-		ZIndex = 5
+		Text = ""
 	}, track)
 
 	local dragging = false
 
 	local function update(x)
-		if track.AbsoluteSize.X <= 0 then return end
+		if track.AbsoluteSize.X <= 0 then
+			return
+		end
 
-		local alpha = math.clamp(
+		local a = math.clamp(
 			(x - track.AbsolutePosition.X)
 				/ track.AbsoluteSize.X,
 			0,
@@ -681,11 +928,11 @@ local function slider(page, name, minimum, maximum, initial, callback)
 		)
 
 		local value = math.floor(
-			minimum + (maximum - minimum) * alpha
+			minimum + (maximum - minimum) * a
 		)
 
-		fill.Size = UDim2.fromScale(alpha, 1)
-		dot.Position = UDim2.fromScale(alpha, 0.5)
+		fill.Size = UDim2.fromScale(a, 1)
+		dot.Position = UDim2.fromScale(a, 0.5)
 		valueLabel.Text = tostring(value)
 
 		if callback then
@@ -726,7 +973,7 @@ local function slider(page, name, minimum, maximum, initial, callback)
 	end)
 end
 
--- ESP AND NAMES
+-- PLAYER VISUALS
 
 local function clearVisual(target)
 	local objects = playerVisuals[target]
@@ -780,9 +1027,9 @@ local function updateVisual(target)
 			Name = "CeeHubESP",
 			Adornee = character,
 			DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
-			FillColor = C.PURPLE,
-			OutlineColor = C.LIGHT,
-			FillTransparency = 0.76,
+			FillColor = C.ORANGE,
+			OutlineColor = C.ORANGE_LIGHT,
+			FillTransparency = 0.78,
 			OutlineTransparency = 0
 		}, gui)
 
@@ -796,22 +1043,32 @@ local function updateVisual(target)
 			local tag = create("BillboardGui", {
 				Name = "CeeHubName",
 				Adornee = head,
-				Size = UDim2.fromOffset(160, 34),
+				Size = UDim2.fromOffset(150, 32),
 				StudsOffset = Vector3.new(0, 2.8, 0),
 				AlwaysOnTop = true,
 				MaxDistance = 1000
 			}, gui)
 
-			local nameLabel = text(
-				tag,
+			local nameBackground = create("Frame", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundColor3 = C.SIDE,
+				BackgroundTransparency = 0.12,
+				BorderSizePixel = 0
+			}, tag)
+
+			corner(nameBackground, 10)
+			stroke(nameBackground, C.ORANGE, 1.3)
+
+			local nameText = label(
+				nameBackground,
 				target.DisplayName,
-				14,
-				C.LIGHT,
+				13,
+				C.WHITE,
 				true
 			)
 
-			nameLabel.Size = UDim2.fromScale(1, 1)
-			nameLabel.TextXAlignment =
+			nameText.Size = UDim2.fromScale(1, 1)
+			nameText.TextXAlignment =
 				Enum.TextXAlignment.Center
 
 			playerVisuals[target].tag = tag
@@ -868,8 +1125,9 @@ connect(Players.PlayerRemoving, function(target)
 
 	playerConnections[target] = nil
 
-	if currentTarget and currentTarget.Parent ==
-		target.Character then
+	if currentTarget
+		and currentTarget.Parent == target.Character then
+
 		currentTarget = nil
 	end
 
@@ -903,7 +1161,7 @@ create("UICorner", {
 }, fov)
 
 create("UIStroke", {
-	Color = C.PURPLE,
+	Color = C.ORANGE,
 	Thickness = 2,
 	Transparency = 0.1
 }, fov)
@@ -919,7 +1177,7 @@ local function updateFov()
 	}, 0.2)
 end
 
--- LOCK ON TARGETING
+-- TARGETING
 
 local function getAimPart(character)
 	if state.targetPart == "Head" then
@@ -989,7 +1247,8 @@ local function findNearestTarget()
 			local part = getAimPart(target.Character)
 
 			if humanoid and humanoid.Health > 0 and part then
-				local inside, distance = targetInsideFov(part)
+				local inside, distance =
+					targetInsideFov(part)
 
 				if inside and distance <= nearestDistance then
 					nearest = part
@@ -1002,8 +1261,6 @@ local function findNearestTarget()
 	return nearest
 end
 
--- FIRST PERSON DETECTION
-
 local function isFirstPerson()
 	local camera = workspace.CurrentCamera
 	local character = player.Character
@@ -1015,30 +1272,27 @@ local function isFirstPerson()
 	local head = character:FindFirstChild("Head")
 	if not head then return false end
 
-	local distance = (
+	return (
 		camera.CFrame.Position - head.Position
-	).Magnitude
-
-	return distance < 1.5
+	).Magnitude < 1.5
 end
 
 -- MOUSE OVERRIDE
--- A strong mouse movement breaks the current lock.
--- The old target is temporarily ignored until you
--- move it outside the FOV circle.
 
 connect(UIS.InputChanged, function(input, processed)
-	if not running or not state.aim then return end
+	if not running or not state.aim then
+		return
+	end
 
 	if input.UserInputType ==
 		Enum.UserInputType.MouseMovement then
 
-		-- Avoid counting movement while interacting with the GUI.
 		if processed and UIS:GetFocusedTextBox() then
 			return
 		end
 
-		mouseMovement = mouseMovement + input.Delta.Magnitude
+		mouseMovement =
+			mouseMovement + input.Delta.Magnitude
 	end
 end)
 
@@ -1051,7 +1305,9 @@ local function breakLock()
 		Players:GetPlayerFromCharacter(character)
 
 	currentTarget = nil
-	overrideUntil = os.clock() + mouseOverrideCooldown
+
+	overrideUntil =
+		os.clock() + mouseOverrideCooldown
 end
 
 -- CAMERA CONTROLLER
@@ -1079,11 +1335,10 @@ RunService:BindToRenderStep(
 		local camera = workspace.CurrentCamera
 		if not camera then return end
 
-		-- Allow a player to be selected again after
-		-- they leave the targeting circle.
 		if ignoredTarget then
 			local character = ignoredTarget.Character
-			local part = character and getAimPart(character)
+			local part =
+				character and getAimPart(character)
 
 			if not part or not validTargetPart(part) then
 				ignoredTarget = nil
@@ -1096,7 +1351,6 @@ RunService:BindToRenderStep(
 			end
 		end
 
-		-- Detect intentional fast camera movement.
 		if currentTarget then
 			local combinedMovement =
 				movement + previousMouseMovement * 0.5
@@ -1110,12 +1364,10 @@ RunService:BindToRenderStep(
 
 		previousMouseMovement = movement
 
-		-- Cooldown prevents instant re-locking.
 		if os.clock() < overrideUntil then
 			return
 		end
 
-		-- Acquire another player when available.
 		if not validTargetPart(currentTarget) then
 			currentTarget = findNearestTarget()
 		end
@@ -1126,19 +1378,16 @@ RunService:BindToRenderStep(
 
 		local origin = camera.CFrame.Position
 		local targetPosition = currentTarget.Position
-		local direction = targetPosition - origin
 
-		if direction.Magnitude < 0.01 then
+		if (targetPosition - origin).Magnitude < 0.01 then
 			return
 		end
 
-		-- Instant camera tracking.
 		local lockedCamera =
 			CFrame.lookAt(origin, targetPosition)
 
 		camera.CFrame = lockedCamera
 
-		-- Align character facing in first person.
 		if isFirstPerson() then
 			local character = player.Character
 
@@ -1149,7 +1398,9 @@ RunService:BindToRenderStep(
 				local humanoid =
 					character:FindFirstChildOfClass("Humanoid")
 
-				if root and humanoid and humanoid.Health > 0 then
+				if root and humanoid
+					and humanoid.Health > 0 then
+
 					local look = lockedCamera.LookVector
 					local flatLook =
 						Vector3.new(look.X, 0, look.Z)
@@ -1173,31 +1424,29 @@ RunService:BindToRenderStep(
 local home = pages.Home
 
 local banner = create("Frame", {
-	Size = UDim2.new(1, 0, 0, 136),
-	BackgroundColor3 = C.DEEP,
+	Size = UDim2.new(1, 0, 0, 132),
+	BackgroundColor3 = C.CARD,
 	BorderSizePixel = 0,
 	ClipsDescendants = true
 }, home)
 
-corner(banner, 14)
+corner(banner, 16)
+-- Thin border only; no thick gold stripe across the top.
+stroke(banner, C.ORANGE, 1.2, 0.22)
 
-local gradient = create("UIGradient", {
+-- Faded sunset orange -> slate -> dark blue background.
+-- The three soft color stops create the gradient in the banner.
+local bannerGradient = create("UIGradient", {
 	Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(
-			0, Color3.fromRGB(48, 25, 112)
-		),
-		ColorSequenceKeypoint.new(
-			0.5, Color3.fromRGB(112, 57, 210)
-		),
-		ColorSequenceKeypoint.new(
-			1, Color3.fromRGB(26, 18, 70)
-		)
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(111, 69, 39)),
+		ColorSequenceKeypoint.new(0.45, Color3.fromRGB(57, 53, 55)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 37, 54))
 	}),
-	Rotation = 20
+	Rotation = 12
 }, banner)
 
 local gradientAnimation = TweenService:Create(
-	gradient,
+	bannerGradient,
 	TweenInfo.new(
 		5,
 		Enum.EasingStyle.Sine,
@@ -1205,46 +1454,92 @@ local gradientAnimation = TweenService:Create(
 		-1,
 		true
 	),
-	{Rotation = -20}
+	{Rotation = -15}
 )
 
 gradientAnimation:Play()
 
-local welcome = text(
+-- WELCOME TEXT
+
+local welcome = label(
 	banner,
-	"Welcome to CeeHub",
-	24,
+	"WELCOME TO CeeHub",
+	20,
 	C.WHITE,
 	true
 )
-welcome.Position = UDim2.fromOffset(22, 22)
-welcome.Size = UDim2.new(1, -44, 0, 38)
 
-local subtitle = text(
+welcome.Position = UDim2.fromOffset(18, 21)
+welcome.Size = UDim2.new(1, -110, 0, 34)
+
+local subtitle = label(
 	banner,
-	"Visuals & Targeting Dashboard",
-	12,
-	C.LIGHT
+	"Roblox Visuals & Targeting Hub",
+	11,
+	C.MUTED
 )
-subtitle.Position = UDim2.fromOffset(23, 64)
-subtitle.Size = UDim2.new(1, -45, 0, 24)
 
-local credit = text(
+subtitle.Position = UDim2.fromOffset(19, 57)
+subtitle.Size = UDim2.new(1, -115, 0, 23)
+
+local credit = label(
 	banner,
-	"MADE BY CeeWorks  •  v1.0",
+	"MADE BY CEEWORKS  •  VERSION 1.0",
 	10,
+	C.ORANGE_LIGHT,
+	true
+)
+
+credit.Position = UDim2.fromOffset(19, 101)
+credit.Size = UDim2.new(1, -110, 0, 19)
+
+-- SINGLE BETTEREH-INSPIRED LOGO
+-- Stylized text; no external asset required.
+
+local behLogo = label(
+	banner,
+	"BEH",
+	25,
 	C.WHITE,
 	true
 )
-credit.Position = UDim2.fromOffset(23, 104)
-credit.Size = UDim2.new(1, -45, 0, 20)
+
+behLogo.AnchorPoint = Vector2.new(1, 0)
+behLogo.Position = UDim2.new(1, -17, 0, 35)
+behLogo.Size = UDim2.fromOffset(75, 34)
+behLogo.TextXAlignment = Enum.TextXAlignment.Center
+
+local behUnderline = create("Frame", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -18, 0, 72),
+	Size = UDim2.fromOffset(72, 3),
+	BackgroundColor3 = C.ORANGE,
+	BorderSizePixel = 0
+}, banner)
+
+corner(behUnderline, 3)
+
+local behCaption = label(
+	banner,
+	"ETERNAL HAVOC",
+	8,
+	C.MUTED,
+	true
+)
+
+behCaption.AnchorPoint = Vector2.new(1, 0)
+behCaption.Position = UDim2.new(1, -12, 0, 79)
+behCaption.Size = UDim2.fromOffset(85, 16)
+behCaption.TextXAlignment = Enum.TextXAlignment.Center
+
+-- QUICK FEATURES
 
 section(home, "Quick Features")
 
 toggle(
 	home,
 	"Player ESP",
-	"Highlight other players through walls",
+	"Highlight other players",
 	"esp",
 	refreshVisuals
 )
@@ -1265,7 +1560,7 @@ toggle(
 toggle(
 	home,
 	"FOV Circle",
-	"Show the adjustable targeting radius",
+	"Show targeting radius",
 	"fov",
 	updateFov
 )
@@ -1279,7 +1574,7 @@ section(visualsPage, "Player Visuals")
 toggle(
 	visualsPage,
 	"Player ESP",
-	"Purple outlines visible through walls",
+	"Orange highlights around players",
 	"esp",
 	refreshVisuals
 )
@@ -1287,7 +1582,7 @@ toggle(
 toggle(
 	visualsPage,
 	"Player Names",
-	"Display player names above characters",
+	"Display names above characters",
 	"names",
 	refreshVisuals
 )
@@ -1307,12 +1602,12 @@ toggle(
 
 local targeting = pages.Targeting
 
-section(targeting, "Lock On")
+section(targeting, "Lock On Settings")
 
 toggle(
 	targeting,
 	"Lock On",
-	"Automatic lock with fast mouse release",
+	"Automatically track targets inside FOV",
 	"aim",
 	function(enabled)
 		if not enabled then
@@ -1325,7 +1620,7 @@ toggle(
 toggle(
 	targeting,
 	"Show FOV Circle",
-	"Display targeting range on screen",
+	"Display targeting circle",
 	"fov",
 	updateFov
 )
@@ -1353,31 +1648,32 @@ slider(
 	end
 )
 
--- TARGET PART SELECTION
+-- TARGET PART
 
 local targetCard = create("Frame", {
-	Size = UDim2.new(1, 0, 0, 95),
+	Size = UDim2.new(1, 0, 0, 90),
 	BackgroundColor3 = C.CARD,
 	BorderSizePixel = 0
 }, targeting)
 
-corner(targetCard, 12)
-border(targetCard)
+corner(targetCard, 15)
+stroke(targetCard, C.BORDER, 1.5, 0.12)
 
-local targetLabel = text(
+local targetLabel = label(
 	targetCard,
 	"Target Part",
-	15,
+	14,
 	C.WHITE,
 	true
 )
-targetLabel.Position = UDim2.fromOffset(18, 10)
-targetLabel.Size = UDim2.new(1, -36, 0, 27)
+
+targetLabel.Position = UDim2.fromOffset(17, 9)
+targetLabel.Size = UDim2.new(1, -34, 0, 26)
 
 local function targetButton(name, x)
 	local button = create("TextButton", {
-		Position = UDim2.new(x, 0, 0, 45),
-		Size = UDim2.new(0.45, 0, 0, 35),
+		Position = UDim2.new(x, 0, 0, 43),
+		Size = UDim2.new(0.45, 0, 0, 33),
 		BackgroundColor3 = C.BORDER,
 		Text = name,
 		TextColor3 = C.WHITE,
@@ -1386,7 +1682,7 @@ local function targetButton(name, x)
 		AutoButtonColor = false
 	}, targetCard)
 
-	corner(button, 8)
+	corner(button, 11)
 
 	connect(button.MouseButton1Click, function()
 		state.targetPart = name
@@ -1403,13 +1699,15 @@ local function refreshTargetButtons()
 	tween(headButton, {
 		BackgroundColor3 =
 			state.targetPart == "Head"
-			and C.DEEP or C.BORDER
+			and C.ORANGE_DARK
+			or C.BORDER
 	})
 
 	tween(torsoButton, {
 		BackgroundColor3 =
 			state.targetPart == "Torso"
-			and C.DEEP or C.BORDER
+			and C.ORANGE_DARK
+			or C.BORDER
 	})
 end
 
@@ -1425,22 +1723,23 @@ local playersPage = pages.Players
 section(playersPage, "Player Profile")
 
 local profile = create("Frame", {
-	Size = UDim2.new(1, 0, 0, 125),
+	Size = UDim2.new(1, 0, 0, 115),
 	BackgroundColor3 = C.CARD,
 	BorderSizePixel = 0
 }, playersPage)
 
-corner(profile, 12)
-border(profile)
+corner(profile, 15)
+stroke(profile, C.BORDER, 1.5, 0.12)
 
 local avatar = create("ImageLabel", {
-	Position = UDim2.fromOffset(18, 19),
-	Size = UDim2.fromOffset(84, 84),
-	BackgroundColor3 = C.DEEP,
+	Position = UDim2.fromOffset(17, 17),
+	Size = UDim2.fromOffset(80, 80),
+	BackgroundColor3 = C.ORANGE_DARK,
 	BorderSizePixel = 0
 }, profile)
 
-corner(avatar, 12)
+corner(avatar, 13)
+stroke(avatar, C.ORANGE, 1.5)
 
 task.spawn(function()
 	local success, image = pcall(function()
@@ -1456,33 +1755,36 @@ task.spawn(function()
 	end
 end)
 
-local displayName = text(
+local displayName = label(
 	profile,
 	player.DisplayName,
-	19,
+	18,
 	C.WHITE,
 	true
 )
-displayName.Position = UDim2.fromOffset(118, 20)
-displayName.Size = UDim2.new(1, -135, 0, 30)
 
-local username = text(
+displayName.Position = UDim2.fromOffset(112, 16)
+displayName.Size = UDim2.new(1, -130, 0, 29)
+
+local username = label(
 	profile,
 	"@" .. player.Name,
-	13,
+	12,
 	C.MUTED
 )
-username.Position = UDim2.fromOffset(118, 53)
-username.Size = UDim2.new(1, -135, 0, 22)
 
-local userId = text(
+username.Position = UDim2.fromOffset(112, 47)
+username.Size = UDim2.new(1, -130, 0, 20)
+
+local userId = label(
 	profile,
 	"User ID: " .. player.UserId,
-	12,
-	C.LIGHT
+	11,
+	C.ORANGE_LIGHT
 )
-userId.Position = UDim2.fromOffset(118, 81)
-userId.Size = UDim2.new(1, -135, 0, 20)
+
+userId.Position = UDim2.fromOffset(112, 73)
+userId.Size = UDim2.new(1, -130, 0, 20)
 
 -- SETTINGS
 
@@ -1531,6 +1833,8 @@ connect(UIS.InputChanged, function(input)
 			startPosition.Y.Scale,
 			startPosition.Y.Offset + delta.Y
 		)
+
+		shadow.Position = main.Position
 	end
 end)
 
@@ -1556,24 +1860,39 @@ connect(minimizeButton.MouseButton1Click, function()
 
 	content.Position = minimized
 		and UDim2.fromOffset(0, 0)
-		or UDim2.fromOffset(190, 0)
+		or UDim2.fromOffset(SIDEBAR_WIDTH, 0)
 
 	content.Size = minimized
 		and UDim2.fromScale(1, 1)
-		or UDim2.new(1, -190, 1, 0)
+		or UDim2.new(1, -SIDEBAR_WIDTH, 1, 0)
 
 	heading.Text = minimized
 		and "CeeHub"
-		or (currentPage == "Home"
-			and "Dashboard" or currentPage)
+		or string.upper(
+			currentPage == "Home"
+			and "Dashboard"
+			or currentPage
+		)
 
 	minimizeButton.Text = minimized and "+" or "−"
 
 	tween(main, {
 		Size = minimized
-			and UDim2.fromOffset(380, 72)
-			or UDim2.fromOffset(790, 500)
-	}, 0.35)
+			and UDim2.fromOffset(340, 65)
+			or UDim2.fromOffset(
+				WINDOW_WIDTH,
+				WINDOW_HEIGHT
+			)
+	}, 0.3)
+
+	tween(shadow, {
+		Size = minimized
+			and UDim2.fromOffset(350, 75)
+			or UDim2.fromOffset(
+				WINDOW_WIDTH + 10,
+				WINDOW_HEIGHT + 10
+			)
+	}, 0.3)
 end)
 
 -- CLEANUP
@@ -1619,6 +1938,7 @@ connect(UIS.InputBegan, function(input, processed)
 
 	if input.KeyCode == Enum.KeyCode.RightShift then
 		main.Visible = not main.Visible
+		shadow.Visible = main.Visible
 	end
 end)
 
@@ -1628,5 +1948,5 @@ switchPage("Home")
 updateFov()
 
 print(
-	"[CeeHub] v1.0 loaded - Mouse Override - Made by CeeWorks"
+	"[CeeHub] v1.0 loaded - Made by CeeWorks"
 )
