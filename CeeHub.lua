@@ -7,7 +7,7 @@
     StarterPlayer > StarterPlayerScripts
 
     RightShift = Show / Hide CeeHub
-    Hold Right Mouse Button = Lock On
+    Automatic Lock On = Enable from the Targeting tab
 
     Designed for your own Roblox experience.
 ]]
@@ -68,7 +68,6 @@ local navButtons = {}
 local refreshers = {}
 
 local currentPage = "Home"
-local aimHeld = false
 local currentTarget = nil
 
 -- HELPERS
@@ -226,6 +225,32 @@ local footer = text(
 )
 footer.Position = UDim2.new(0, 19, 1, -37)
 footer.Size = UDim2.fromOffset(160, 23)
+
+-- DISCORD COMMUNITY INVITE (ALWAYS VISIBLE IN FULL WINDOW)
+local discordCard = create("Frame", {
+	Name = "DiscordCommunity",
+	Position = UDim2.fromOffset(12, 391),
+	Size = UDim2.new(1, -24, 0, 65),
+	BackgroundColor3 = C.DEEP,
+	BorderSizePixel = 0
+}, sidebar)
+corner(discordCard, 10)
+border(discordCard, C.PURPLE, 0)
+
+local discordHeading = text(discordCard, "JOIN OUR DISCORD!", 12, C.WHITE, true)
+discordHeading.Position = UDim2.fromOffset(6, 5)
+discordHeading.Size = UDim2.new(1, -12, 0, 18)
+discordHeading.TextXAlignment = Enum.TextXAlignment.Center
+
+local discordCommunity = text(discordCard, "CeeWorks Studio", 12, C.LIGHT, true)
+discordCommunity.Position = UDim2.fromOffset(6, 23)
+discordCommunity.Size = UDim2.new(1, -12, 0, 18)
+discordCommunity.TextXAlignment = Enum.TextXAlignment.Center
+
+local discordInvite = text(discordCard, "W5hU4DEJKZ", 14, C.WHITE, true)
+discordInvite.Position = UDim2.fromOffset(6, 42)
+discordInvite.Size = UDim2.new(1, -12, 0, 19)
+discordInvite.TextXAlignment = Enum.TextXAlignment.Center
 
 -- CONTENT
 
@@ -921,35 +946,12 @@ local function isFirstPerson()
 	return distance < 1.5
 end
 
--- RIGHT MOUSE BUTTON INPUT
+-- AUTOMATIC CAMERA LOCK ON
+-- A player inside the FOV circle is acquired automatically whenever
+-- Lock On is enabled. The target is retained until invalid.
+-- This is a camera mechanic for a Roblox Studio experience you own.
 
-connect(UIS.InputBegan, function(input, processed)
-	if input.UserInputType ==
-		Enum.UserInputType.MouseButton2 then
-
-		-- Do not let the default camera's mouse lock
-		-- prevent aim input in first person.
-		if not processed or isFirstPerson() then
-			aimHeld = true
-			currentTarget = nil
-		end
-	end
-end)
-
-connect(UIS.InputEnded, function(input)
-	if input.UserInputType ==
-		Enum.UserInputType.MouseButton2 then
-
-		aimHeld = false
-		currentTarget = nil
-	end
-end)
-
--- INSTANT CAMERA LOCK ON
--- Runs after the default Roblox camera controller.
--- One target remains selected while right-click is held.
-
-local aimRenderName = "CeeHubAimAssist"
+local aimRenderName = "CeeHubAutoLock"
 
 RunService:BindToRenderStep(
 	aimRenderName,
@@ -958,7 +960,7 @@ RunService:BindToRenderStep(
 		if not running then return end
 		updateScale()
 
-		if not state.aim or not aimHeld then
+		if not state.aim then
 			currentTarget = nil
 			return
 		end
@@ -969,19 +971,18 @@ RunService:BindToRenderStep(
 		if not validTargetPart(currentTarget) then
 			currentTarget = findNearestTarget()
 		end
+
 		if not currentTarget then return end
 
 		local origin = camera.CFrame.Position
-		local targetPosition = currentTarget.Position
-		local direction = targetPosition - origin
-		if direction.Magnitude < 0.01 then return end
+		local destination = currentTarget.Position
+		if (destination - origin).Magnitude < 0.01 then return end
 
-		-- No interpolation: keep the target in the camera center.
-		local lockedCamera = CFrame.lookAt(origin, targetPosition)
+		-- No right-click or smoothing required, in either camera mode.
+		local lockedCamera = CFrame.lookAt(origin, destination)
 		camera.CFrame = lockedCamera
 
-		-- In first person, align the character's horizontal facing
-		-- direction so Roblox's character rotation does not fight the lock.
+		-- Keep the local character facing the same direction in first-person.
 		if isFirstPerson() then
 			local character = player.Character
 			if character then
@@ -1087,7 +1088,7 @@ toggle(
 toggle(
 	home,
 	"Lock On",
-	"Hold right-click to lock onto a target",
+	"Automatically track players inside your FOV",
 	"aim",
 	function(enabled)
 		if not enabled then
@@ -1146,7 +1147,7 @@ section(targeting, "Lock On")
 toggle(
 	targeting,
 	"Lock On",
-	"Hold right mouse button to lock on",
+	"Auto-lock when a player enters the FOV circle",
 	"aim",
 	function(enabled)
 		if not enabled then
@@ -1450,5 +1451,5 @@ switchPage("Home")
 updateFov()
 
 print(
-	"[CeeHub] v1.0 loaded - Lock On - Made by CeeWorks"
+	"[CeeHub] v1.0 loaded - Auto Lock - CeeWorks Studio"
 )
